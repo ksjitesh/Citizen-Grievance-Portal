@@ -24,6 +24,11 @@ import MyGrievances from "./pages/MyGrievances";
 import Settings from "./pages/Settings";
 import AuthorityDashboard from "./pages/AuthorityDashboard";
 
+
+// --------------------------------------------------
+// Scroll to top whenever route changes
+// --------------------------------------------------
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -38,10 +43,15 @@ function ScrollToTop() {
   return null;
 }
 
+
+// --------------------------------------------------
+// Authentication loading screen
+// --------------------------------------------------
+
 function AuthLoadingScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F8FAFC] dark:bg-black">
-      <div className="text-center">
+    <main className="flex min-h-screen items-center justify-center bg-[#F8FAFC] text-[#0B1F3A] dark:bg-black dark:text-white">
+      <div className="px-6 text-center">
         <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#D97706] dark:border-[#262626] dark:border-t-[#F28C28]" />
 
         <p className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -51,6 +61,11 @@ function AuthLoadingScreen() {
     </main>
   );
 }
+
+
+// --------------------------------------------------
+// Protected route
+// --------------------------------------------------
 
 function ProtectedRoute({ children }) {
   const {
@@ -74,10 +89,17 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+
+// --------------------------------------------------
+// Public-only route
+// Logged-in users should not access login/register
+// --------------------------------------------------
+
 function PublicOnlyRoute({ children }) {
   const {
     isAuthenticated,
     loading,
+    isAuthority,
   } = useAuth();
 
   if (loading) {
@@ -85,6 +107,45 @@ function PublicOnlyRoute({ children }) {
   }
 
   if (isAuthenticated) {
+    return (
+      <Navigate
+        to={isAuthority ? "/authority-dashboard" : "/"}
+        replace
+      />
+    );
+  }
+
+  return children;
+}
+
+
+// --------------------------------------------------
+// Authority-only route
+// --------------------------------------------------
+
+function AuthorityRoute({ children }) {
+  const {
+    isAuthenticated,
+    isAuthority,
+    loading,
+  } = useAuth();
+
+  if (loading) {
+    return <AuthLoadingScreen />;
+  }
+
+  // Not logged in
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  // Logged in but not an authority
+  if (!isAuthority) {
     return (
       <Navigate
         to="/"
@@ -96,15 +157,21 @@ function PublicOnlyRoute({ children }) {
   return children;
 }
 
+
+// --------------------------------------------------
+// Application routes
+// --------------------------------------------------
+
 function AppRoutes() {
   return (
     <>
       <ScrollToTop />
 
       <Routes>
-        {/* =================================
-            PUBLIC AUTH ROUTES
-        ================================== */}
+
+        {/* ---------------------------------------- */}
+        {/* PUBLIC AUTH ROUTES                      */}
+        {/* ---------------------------------------- */}
 
         <Route
           path="/login"
@@ -126,14 +193,13 @@ function AppRoutes() {
 
         <Route
           path="/forgot-password"
-          element={
-            <ForgotPassword />
-          }
+          element={<ForgotPassword />}
         />
 
-        {/* =================================
-            CITIZEN ROUTES
-        ================================== */}
+
+        {/* ---------------------------------------- */}
+        {/* CITIZEN ROUTES                          */}
+        {/* ---------------------------------------- */}
 
         <Route
           path="/"
@@ -180,26 +246,24 @@ function AppRoutes() {
           }
         />
 
-        {/* =================================
-            AUTHORITY DASHBOARD
 
-            Temporarily public for the
-            hackathon prototype.
-
-            Firebase / backend RBAC will
-            secure this later.
-        ================================== */}
+        {/* ---------------------------------------- */}
+        {/* AUTHORITY ROUTE                         */}
+        {/* ---------------------------------------- */}
 
         <Route
           path="/authority-dashboard"
           element={
-            <AuthorityDashboard />
+            <AuthorityRoute>
+              <AuthorityDashboard />
+            </AuthorityRoute>
           }
         />
 
-        {/* =================================
-            FALLBACK
-        ================================== */}
+
+        {/* ---------------------------------------- */}
+        {/* FALLBACK                                */}
+        {/* ---------------------------------------- */}
 
         <Route
           path="*"
@@ -210,10 +274,16 @@ function AppRoutes() {
             />
           }
         />
+
       </Routes>
     </>
   );
 }
+
+
+// --------------------------------------------------
+// Root App
+// --------------------------------------------------
 
 function App() {
   return (

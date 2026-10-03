@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import {
   ArrowLeft,
   Search,
@@ -15,13 +16,17 @@ import {
   Hash,
   RefreshCw,
 } from "lucide-react";
+
 import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { getComplaintByReference } from "../services/complaintService";
+
+import {
+  getComplaintByReference,
+} from "../services/complaintService";
 
 const statusConfig = {
   Submitted: {
@@ -132,7 +137,10 @@ function getTimelineIcon(status, isLatest) {
 
 function TrackComplaint() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+
+  const [searchParams] =
+    useSearchParams();
+
   const { user } = useAuth();
 
   const [referenceId, setReferenceId] =
@@ -141,7 +149,8 @@ function TrackComplaint() {
   const [complaint, setComplaint] =
     useState(null);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   const [searching, setSearching] =
     useState(false);
@@ -158,7 +167,9 @@ function TrackComplaint() {
     reference
   ) => {
     const cleanReferenceId =
-      reference.trim().toUpperCase();
+      reference
+        .trim()
+        .toUpperCase();
 
     if (!cleanReferenceId) {
       setError(
@@ -166,6 +177,7 @@ function TrackComplaint() {
       );
 
       setComplaint(null);
+
       return;
     }
 
@@ -185,6 +197,7 @@ function TrackComplaint() {
       );
 
       setSearching(false);
+
       return;
     }
 
@@ -204,10 +217,12 @@ function TrackComplaint() {
       );
 
       setSearching(false);
+
       return;
     }
 
     setComplaint(result);
+
     setSearching(false);
   };
 
@@ -236,6 +251,80 @@ function TrackComplaint() {
     user?.id,
   ]);
 
+  /*
+   * Live complaint update listener.
+   *
+   * When Authority Dashboard updates a complaint
+   * in the same browser tab, complaintService
+   * dispatches "civicai-complaints-updated".
+   *
+   * This refreshes the currently displayed complaint
+   * without requiring the citizen to search again.
+   *
+   * The "storage" listener also handles updates
+   * coming from another browser tab.
+   */
+  useEffect(() => {
+    const handleComplaintUpdate = () => {
+      const currentReference =
+        searchParams.get("reference");
+
+      if (!currentReference) {
+        return;
+      }
+
+      const updatedComplaint =
+        getComplaintByReference(
+          currentReference
+        );
+
+      if (!updatedComplaint) {
+        return;
+      }
+
+      if (
+        updatedComplaint.citizenId &&
+        updatedComplaint.citizenId !==
+          user?.id
+      ) {
+        return;
+      }
+
+      setComplaint(
+        updatedComplaint
+      );
+    };
+
+    const handleStorageChange = () => {
+      handleComplaintUpdate();
+    };
+
+    window.addEventListener(
+      "civicai-complaints-updated",
+      handleComplaintUpdate
+    );
+
+    window.addEventListener(
+      "storage",
+      handleStorageChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "civicai-complaints-updated",
+        handleComplaintUpdate
+      );
+
+      window.removeEventListener(
+        "storage",
+        handleStorageChange
+      );
+    };
+  }, [
+    searchParams,
+    user?.id,
+  ]);
+
   const handleSearch = (event) => {
     event.preventDefault();
 
@@ -255,6 +344,7 @@ function TrackComplaint() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-slate-900 transition-colors duration-300 dark:bg-black dark:text-white">
       <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+
         {/* Back */}
         <button
           type="button"
@@ -389,6 +479,7 @@ function TrackComplaint() {
         {/* Complaint Result */}
         {complaint && (
           <section className="mt-8 space-y-6">
+
             {/* Result Header */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A] sm:p-7">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -432,6 +523,7 @@ function TrackComplaint() {
 
             {/* Details */}
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A] sm:p-7">
                 <div className="mb-6 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B1F3A]/10 text-[#0B1F3A] dark:bg-[#F28C28]/10 dark:text-[#F28C28]">
@@ -450,6 +542,7 @@ function TrackComplaint() {
                 </div>
 
                 <div className="space-y-5">
+
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                       Complaint Title
@@ -473,6 +566,7 @@ function TrackComplaint() {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
+
                     <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-[#202020] dark:bg-[#111111]">
                       <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                         Category
@@ -495,6 +589,7 @@ function TrackComplaint() {
                           "General Administration"}
                       </p>
                     </div>
+
                   </div>
 
                   <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-[#202020] dark:bg-[#111111]">
@@ -526,17 +621,20 @@ function TrackComplaint() {
                       </div>
                     </div>
                   </div>
+
                 </div>
               </div>
 
               {/* Case Information */}
               <div className="space-y-6">
+
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A] sm:p-7">
                   <h3 className="font-bold">
                     Case Information
                   </h3>
 
                   <div className="mt-5 space-y-4">
+
                     <div className="flex items-start gap-3">
                       <CalendarDays
                         size={18}
@@ -610,6 +708,7 @@ function TrackComplaint() {
                         </p>
                       </div>
                     </div>
+
                   </div>
                 </div>
 
@@ -632,6 +731,7 @@ function TrackComplaint() {
                     </div>
                   </div>
                 </div>
+
               </div>
             </div>
 
@@ -649,70 +749,75 @@ function TrackComplaint() {
               </div>
 
               <div className="space-y-0">
-                {(
-                  complaint.statusHistory || []
-                ).map((entry, index, history) => {
-                  const isLatest =
-                    index ===
-                    history.length - 1;
+                {(complaint.statusHistory || [])
+                  .map(
+                    (
+                      entry,
+                      index,
+                      history
+                    ) => {
+                      const isLatest =
+                        index ===
+                        history.length - 1;
 
-                  return (
-                    <div
-                      key={`${entry.timestamp}-${index}`}
-                      className="relative flex gap-4"
-                    >
-                      {index <
-                        history.length - 1 && (
-                        <div className="absolute left-[8px] top-7 h-full w-px bg-slate-200 dark:bg-[#2A2A2A]" />
-                      )}
-
-                      <div
-                        className={`relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white dark:bg-[#0A0A0A] ${
-                          isLatest
-                            ? "ring-4 ring-[#D97706]/10 dark:ring-[#F28C28]/10"
-                            : ""
-                        }`}
-                      >
-                        {getTimelineIcon(
-                          entry.status,
-                          isLatest
-                        )}
-                      </div>
-
-                      <div
-                        className={`pb-7 ${
-                          isLatest
-                            ? ""
-                            : "opacity-80"
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm font-bold">
-                            {entry.status}
-                          </h4>
-
-                          {isLatest && (
-                            <span className="rounded-full bg-[#D97706]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#B45309] dark:bg-[#F28C28]/10 dark:text-[#F28C28]">
-                              Current
-                            </span>
+                      return (
+                        <div
+                          key={`${entry.timestamp}-${index}`}
+                          className="relative flex gap-4"
+                        >
+                          {index <
+                            history.length - 1 && (
+                            <div className="absolute left-[8px] top-7 h-full w-px bg-slate-200 dark:bg-[#2A2A2A]" />
                           )}
+
+                          <div
+                            className={`relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white dark:bg-[#0A0A0A] ${
+                              isLatest
+                                ? "ring-4 ring-[#D97706]/10 dark:ring-[#F28C28]/10"
+                                : ""
+                            }`}
+                          >
+                            {getTimelineIcon(
+                              entry.status,
+                              isLatest
+                            )}
+                          </div>
+
+                          <div
+                            className={`pb-7 ${
+                              isLatest
+                                ? ""
+                                : "opacity-80"
+                            }`}
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-bold">
+                                {entry.status}
+                              </h4>
+
+                              {isLatest && (
+                                <span className="rounded-full bg-[#D97706]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#B45309] dark:bg-[#F28C28]/10 dark:text-[#F28C28]">
+                                  Current
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="mt-1 text-xs font-medium text-slate-400">
+                              {formatDateTime(
+                                entry.timestamp
+                              )}
+                            </p>
+
+                            {entry.note && (
+                              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                {entry.note}
+                              </p>
+                            )}
+                          </div>
                         </div>
-
-                        <p className="mt-1 text-xs font-medium text-slate-400">
-                          {formatDateTime(
-                            entry.timestamp
-                          )}
-                        </p>
-
-                        {entry.note && (
-                          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                            {entry.note}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    }
+                  )}
 
                 {(!complaint.statusHistory ||
                   complaint.statusHistory
@@ -754,6 +859,7 @@ function TrackComplaint() {
                 </p>
               </div>
             </div>
+
           </section>
         )}
       </div>

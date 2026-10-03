@@ -23,7 +23,7 @@ function Hero() {
 
       <div className="absolute left-0 right-0 top-0 h-1 bg-[#F28C28]" />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
+      <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-24 sm:pb-20 sm:pt-28 lg:px-8 lg:py-24">
         <div className="grid items-center gap-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-16">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/90 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#B45309] shadow-sm dark:border-orange-900/60 dark:bg-neutral-950 dark:text-[#F28C28]">

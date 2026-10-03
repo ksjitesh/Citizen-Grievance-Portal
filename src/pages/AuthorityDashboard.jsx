@@ -16,6 +16,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -171,10 +172,10 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${config.className}`}
+      className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${config.className}`}
     >
-      <Icon size={13} />
-      {status || "Unknown"}
+      <Icon size={13} className="shrink-0" />
+      <span className="truncate">{status || "Unknown"}</span>
     </span>
   );
 }
@@ -186,9 +187,9 @@ function PriorityBadge({ priority }) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
+      className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
     >
-      {priority || "Unknown"}
+      <span className="truncate">{priority || "Unknown"}</span>
     </span>
   );
 }
@@ -201,28 +202,28 @@ function StatCard({
   accent,
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-[#262626] dark:bg-[#0A0A0A]">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-neutral-400">
+    <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-[#262626] dark:bg-[#0A0A0A] sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-500 sm:text-sm sm:normal-case sm:tracking-normal">
             {label}
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             {value}
           </p>
 
           {description && (
-            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-500">
+            <p className="mt-1 truncate text-xs text-slate-500 dark:text-neutral-500">
               {description}
             </p>
           )}
         </div>
 
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accent}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition group-hover:scale-105 sm:h-11 sm:w-11 ${accent}`}
         >
-          <Icon size={21} />
+          <Icon size={20} />
         </div>
       </div>
     </div>
@@ -274,9 +275,19 @@ export default function AuthorityDashboard() {
       handleUpdate
     );
 
+    window.addEventListener(
+      "storage",
+      handleUpdate
+    );
+
     return () => {
       window.removeEventListener(
         "civicai-complaints-updated",
+        handleUpdate
+      );
+
+      window.removeEventListener(
+        "storage",
         handleUpdate
       );
     };
@@ -343,8 +354,7 @@ export default function AuthorityDashboard() {
       selectedComplaint,
       complaints.filter(
         (complaint) =>
-          complaint.id !==
-          selectedComplaint.id
+          complaint.id !== selectedComplaint.id
       )
     );
   }, [
@@ -370,14 +380,11 @@ export default function AuthorityDashboard() {
     setStatusNote("");
   };
 
-  const handleStatusUpdate = (
-    nextStatus
-  ) => {
+  const handleStatusUpdate = (nextStatus) => {
     if (
       !selectedComplaint ||
       !nextStatus ||
-      nextStatus ===
-        selectedComplaint.status
+      nextStatus === selectedComplaint.status
     ) {
       return;
     }
@@ -395,52 +402,50 @@ export default function AuthorityDashboard() {
     );
 
     if (result.success) {
-      setSelectedComplaint(
-        result.complaint
-      );
-
+      setSelectedComplaint(result.complaint);
       setStatusNote("");
-
-      setComplaints(
-        getAllComplaints()
-      );
+      setComplaints(getAllComplaints());
     }
 
     setUpdatingStatus(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 dark:bg-black dark:text-white sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 px-3 py-5 text-slate-900 dark:bg-black dark:text-white sm:px-6 sm:py-8 lg:px-8">
       <div className="mx-auto max-w-7xl">
+
         {/* HEADER */}
-        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+        <div className="mb-6 flex flex-col gap-5 lg:mb-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
             <button
               type="button"
-              onClick={() =>
-                navigate("/")
-              }
-              className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white"
+              onClick={() => navigate("/")}
+              className="mb-4 inline-flex items-center gap-2 rounded-lg py-1 text-sm font-medium text-slate-500 transition hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white"
             >
               <ArrowLeft size={17} />
               Back to Portal
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0B1F3A] text-white dark:bg-white dark:text-black">
-                <ShieldCheck
-                  size={24}
-                />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0B1F3A] text-white shadow-sm dark:bg-white dark:text-black sm:h-12 sm:w-12">
+                <ShieldCheck size={23} />
+
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-slate-50 dark:ring-black" />
               </div>
 
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  Authority Dashboard
-                </h1>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tight sm:text-3xl">
+                    Authority Dashboard
+                  </h1>
 
-                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-                  CivicAI grievance management and
-                  case monitoring
+                  <span className="hidden rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400 sm:inline-flex">
+                    Live
+                  </span>
+                </div>
+
+                <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400 sm:text-sm">
+                  CivicAI grievance management and case monitoring
                 </p>
               </div>
             </div>
@@ -449,15 +454,20 @@ export default function AuthorityDashboard() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#262626] dark:bg-[#0A0A0A] dark:text-neutral-200 dark:hover:bg-[#111111]"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.99] dark:border-[#262626] dark:bg-[#0A0A0A] dark:text-neutral-200 dark:hover:bg-[#111111] sm:w-auto"
           >
-            <RefreshCw size={16} />
+            <RefreshCw
+              size={16}
+              className={
+                loading ? "animate-spin" : ""
+              }
+            />
             Refresh Data
           </button>
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
           <StatCard
             label="Total Complaints"
             value={stats.total}
@@ -492,26 +502,29 @@ export default function AuthorityDashboard() {
         </div>
 
         {/* FILTER AREA */}
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A]">
-          <div className="mb-4 flex items-center gap-2">
-            <Filter
-              size={18}
-              className="text-[#D97706]"
-            />
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A] sm:mt-8 sm:p-4">
+          <div className="mb-3 flex items-center gap-2 sm:mb-4">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 dark:bg-[#17100A]">
+              <Filter
+                size={16}
+                className="text-[#D97706]"
+              />
+            </div>
 
-            <h2 className="font-semibold">
+            <h2 className="text-sm font-bold sm:text-base">
               Complaint Management
             </h2>
 
-            <span className="ml-auto text-xs text-slate-500 dark:text-neutral-500">
+            <span className="ml-auto whitespace-nowrap text-[11px] text-slate-500 dark:text-neutral-500 sm:text-xs">
               {filteredComplaints.length} of{" "}
               {complaints.length} cases
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_190px_190px_auto]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1fr_180px_180px_auto]">
+
             {/* SEARCH */}
-            <div className="relative">
+            <div className="relative md:col-span-2 lg:col-span-1">
               <Search
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-neutral-500"
@@ -521,12 +534,10 @@ export default function AuthorityDashboard() {
                 type="text"
                 value={searchQuery}
                 onChange={(event) =>
-                  setSearchQuery(
-                    event.target.value
-                  )
+                  setSearchQuery(event.target.value)
                 }
-                placeholder="Search reference, citizen, category, department..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#D97706] focus:ring-2 focus:ring-[#D97706]/10 dark:border-[#262626] dark:bg-[#111111] dark:text-white dark:placeholder:text-neutral-600"
+                placeholder="Search reference, citizen, category..."
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-[#D97706]/10 dark:border-[#262626] dark:bg-[#111111] dark:text-white dark:placeholder:text-neutral-600"
               />
             </div>
 
@@ -535,24 +546,20 @@ export default function AuthorityDashboard() {
               <select
                 value={statusFilter}
                 onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value
-                  )
+                  setStatusFilter(event.target.value)
                 }
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm font-medium outline-none focus:border-[#D97706] dark:border-[#262626] dark:bg-[#111111] dark:text-white"
+                className="min-h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 pr-10 text-sm font-medium outline-none focus:border-[#D97706] dark:border-[#262626] dark:bg-[#111111] dark:text-white"
               >
-                {STATUS_OPTIONS.map(
-                  (status) => (
-                    <option
-                      key={status}
-                      value={status}
-                    >
-                      {status === "All"
-                        ? "All Statuses"
-                        : status}
-                    </option>
-                  )
-                )}
+                {STATUS_OPTIONS.map((status) => (
+                  <option
+                    key={status}
+                    value={status}
+                  >
+                    {status === "All"
+                      ? "All Statuses"
+                      : status}
+                  </option>
+                ))}
               </select>
 
               <ChevronDown
@@ -566,24 +573,20 @@ export default function AuthorityDashboard() {
               <select
                 value={priorityFilter}
                 onChange={(event) =>
-                  setPriorityFilter(
-                    event.target.value
-                  )
+                  setPriorityFilter(event.target.value)
                 }
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm font-medium outline-none focus:border-[#D97706] dark:border-[#262626] dark:bg-[#111111] dark:text-white"
+                className="min-h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 pr-10 text-sm font-medium outline-none focus:border-[#D97706] dark:border-[#262626] dark:bg-[#111111] dark:text-white"
               >
-                {PRIORITY_OPTIONS.map(
-                  (priority) => (
-                    <option
-                      key={priority}
-                      value={priority}
-                    >
-                      {priority === "All"
-                        ? "All Priorities"
-                        : priority}
-                    </option>
-                  )
-                )}
+                {PRIORITY_OPTIONS.map((priority) => (
+                  <option
+                    key={priority}
+                    value={priority}
+                  >
+                    {priority === "All"
+                      ? "All Priorities"
+                      : priority}
+                  </option>
+                ))}
               </select>
 
               <ChevronDown
@@ -600,7 +603,7 @@ export default function AuthorityDashboard() {
                 setStatusFilter("All");
                 setPriorityFilter("All");
               }}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-[#262626] dark:bg-[#0A0A0A] dark:text-neutral-300 dark:hover:bg-[#111111]"
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-[0.99] dark:border-[#262626] dark:bg-[#0A0A0A] dark:text-neutral-300 dark:hover:bg-[#111111]"
             >
               Reset
             </button>
@@ -608,9 +611,9 @@ export default function AuthorityDashboard() {
         </div>
 
         {/* COMPLAINT TABLE */}
-        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A]">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#262626] dark:bg-[#0A0A0A] sm:mt-5">
           {loading ? (
-            <div className="flex min-h-[300px] items-center justify-center">
+            <div className="flex min-h-[280px] items-center justify-center px-5">
               <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-neutral-400">
                 <RefreshCw
                   size={18}
@@ -619,22 +622,32 @@ export default function AuthorityDashboard() {
                 Loading complaints...
               </div>
             </div>
-          ) : filteredComplaints.length ===
-            0 ? (
-            <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
-                <FileText size={28} />
+          ) : filteredComplaints.length === 0 ? (
+            <div className="flex min-h-[340px] flex-col items-center justify-center px-5 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
+                <FileText size={26} />
               </div>
 
               <h3 className="mt-5 text-lg font-semibold">
                 No complaints found
               </h3>
 
-              <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-neutral-500">
-                Try changing your search query or
-                filters. New citizen grievances will
-                appear here automatically.
+              <p className="mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-neutral-500">
+                Try changing your search query or filters.
+                New citizen grievances will appear here automatically.
               </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("All");
+                  setPriorityFilter("All");
+                }}
+                className="mt-5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-[#262626] dark:hover:bg-[#111111]"
+              >
+                Clear Filters
+              </button>
             </div>
           ) : (
             <>
@@ -699,16 +712,13 @@ export default function AuthorityDashboard() {
                                       "Untitled grievance"}
                                   </p>
 
-                                  {duplicateCount >
-                                    0 && (
+                                  {duplicateCount > 0 && (
                                     <span
                                       title={`${duplicateCount} possible duplicate case(s)`}
                                       className="shrink-0 text-orange-500"
                                     >
                                       <AlertTriangle
-                                        size={
-                                          15
-                                        }
+                                        size={15}
                                       />
                                     </span>
                                   )}
@@ -822,8 +832,7 @@ export default function AuthorityDashboard() {
                         complaint,
                         complaints.filter(
                           (item) =>
-                            item.id !==
-                            complaint.id
+                            item.id !== complaint.id
                         )
                       ).length;
 
@@ -832,7 +841,7 @@ export default function AuthorityDashboard() {
                         key={complaint.id}
                         className="p-4 sm:p-5"
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <h3 className="truncate text-sm font-bold">
@@ -840,8 +849,7 @@ export default function AuthorityDashboard() {
                                   "Untitled grievance"}
                               </h3>
 
-                              {duplicateCount >
-                                0 && (
+                              {duplicateCount > 0 && (
                                 <AlertTriangle
                                   size={15}
                                   className="shrink-0 text-orange-500"
@@ -855,16 +863,18 @@ export default function AuthorityDashboard() {
                             </p>
                           </div>
 
-                          <StatusBadge
-                            status={
-                              complaint.status
-                            }
-                          />
+                          <div className="shrink-0">
+                            <StatusBadge
+                              status={
+                                complaint.status
+                              }
+                            />
+                          </div>
                         </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-neutral-600">
+                        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-600">
                               Citizen
                             </p>
 
@@ -874,8 +884,8 @@ export default function AuthorityDashboard() {
                             </p>
                           </div>
 
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-neutral-600">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-600">
                               Category
                             </p>
 
@@ -887,7 +897,7 @@ export default function AuthorityDashboard() {
                           </div>
 
                           <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-neutral-600">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-600">
                               Priority
                             </p>
 
@@ -901,7 +911,7 @@ export default function AuthorityDashboard() {
                           </div>
 
                           <div>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-neutral-600">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-600">
                               Date
                             </p>
 
@@ -913,14 +923,25 @@ export default function AuthorityDashboard() {
                           </div>
                         </div>
 
+                        <div className="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-[#111111]">
+                          <MapPin
+                            size={14}
+                            className="mt-0.5 shrink-0 text-slate-400"
+                          />
+
+                          <p className="line-clamp-2 text-xs leading-5 text-slate-500 dark:text-neutral-500">
+                            {getLocationText(
+                              complaint
+                            )}
+                          </p>
+                        </div>
+
                         <button
                           type="button"
                           onClick={() =>
-                            openComplaint(
-                              complaint
-                            )
+                            openComplaint(complaint)
                           }
-                          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-[#262626] dark:hover:bg-[#111111]"
+                          className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 active:scale-[0.99] dark:border-[#262626] dark:hover:bg-[#111111]"
                         >
                           <Eye size={16} />
                           View Complaint
@@ -937,13 +958,14 @@ export default function AuthorityDashboard() {
 
       {/* DETAIL MODAL */}
       {selectedComplaint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6">
-          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#262626] dark:bg-[#0A0A0A]">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4 md:p-6">
+          <div className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl dark:border-[#262626] dark:bg-[#0A0A0A] sm:max-h-[94vh] sm:rounded-2xl">
+
             {/* MODAL HEADER */}
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-[#262626] sm:px-6">
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3.5 dark:border-[#262626] sm:px-6 sm:py-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-lg font-bold sm:text-xl">
+                  <h2 className="max-w-[calc(100vw-100px)] truncate text-base font-bold sm:max-w-none sm:text-xl">
                     {selectedComplaint.title ||
                       "Complaint Details"}
                   </h2>
@@ -955,7 +977,7 @@ export default function AuthorityDashboard() {
                   />
                 </div>
 
-                <p className="mt-1 text-sm font-semibold text-[#D97706]">
+                <p className="mt-1 truncate text-xs font-semibold text-[#D97706] sm:text-sm">
                   {selectedComplaint.referenceId}
                 </p>
               </div>
@@ -963,22 +985,26 @@ export default function AuthorityDashboard() {
               <button
                 type="button"
                 onClick={closeComplaint}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-[#262626] dark:text-neutral-400 dark:hover:bg-[#111111]"
+                disabled={updatingStatus}
+                aria-label="Close complaint details"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#262626] dark:text-neutral-400 dark:hover:bg-[#111111]"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* MODAL BODY */}
-            <div className="overflow-y-auto px-5 py-5 sm:px-6">
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+            <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.65fr] xl:gap-5">
+
                 {/* LEFT */}
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
+
                   {/* STATUS */}
                   <div className="rounded-2xl border border-slate-200 p-4 dark:border-[#262626]">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-600">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-600">
                           Current Status
                         </p>
 
@@ -997,29 +1023,25 @@ export default function AuthorityDashboard() {
                             selectedComplaint.status ||
                             "Submitted"
                           }
-                          disabled={
-                            updatingStatus
-                          }
+                          disabled={updatingStatus}
                           onChange={(event) =>
                             handleStatusUpdate(
                               event.target.value
                             )
                           }
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium outline-none focus:border-[#D97706] disabled:opacity-60 dark:border-[#262626] dark:bg-[#111111] dark:text-white"
+                          className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium outline-none focus:border-[#D97706] disabled:opacity-60 dark:border-[#262626] dark:bg-[#111111] dark:text-white"
                         >
                           {STATUS_OPTIONS.filter(
                             (status) =>
                               status !== "All"
-                          ).map(
-                            (status) => (
-                              <option
-                                key={status}
-                                value={status}
-                              >
-                                {status}
-                              </option>
-                            )
-                          )}
+                          ).map((status) => (
+                            <option
+                              key={status}
+                              value={status}
+                            >
+                              {status}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -1036,7 +1058,7 @@ export default function AuthorityDashboard() {
                             event.target.value
                           )
                         }
-                        rows={2}
+                        rows={3}
                         placeholder="Optional note for the citizen..."
                         className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-[#D97706] dark:border-[#262626] dark:bg-[#111111] dark:text-white dark:placeholder:text-neutral-600"
                       />
@@ -1069,18 +1091,18 @@ export default function AuthorityDashboard() {
                     </h3>
 
                     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs text-slate-400 dark:text-neutral-600">
                           Full Name
                         </p>
 
-                        <p className="mt-1 text-sm font-medium">
+                        <p className="mt-1 break-words text-sm font-medium">
                           {selectedComplaint.citizenName ||
                             "Not provided"}
                         </p>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs text-slate-400 dark:text-neutral-600">
                           Email
                         </p>
@@ -1135,7 +1157,7 @@ export default function AuthorityDashboard() {
                           Address / Area
                         </p>
 
-                        <p className="mt-1 text-sm font-medium">
+                        <p className="mt-1 break-words text-sm font-medium">
                           {getLocationText(
                             selectedComplaint
                           )}
@@ -1148,10 +1170,8 @@ export default function AuthorityDashboard() {
                             Landmark
                           </p>
 
-                          <p className="mt-1 text-sm">
-                            {
-                              selectedComplaint.landmark
-                            }
+                          <p className="mt-1 break-words text-sm">
+                            {selectedComplaint.landmark}
                           </p>
                         </div>
                       )}
@@ -1164,13 +1184,13 @@ export default function AuthorityDashboard() {
                             GPS Coordinates
                           </p>
 
-                          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          <div className="mt-2 grid grid-cols-1 gap-3 min-[420px]:grid-cols-3">
                             <div>
                               <p className="text-[11px] text-slate-400 dark:text-neutral-600">
                                 Latitude
                               </p>
 
-                              <p className="text-sm font-medium">
+                              <p className="mt-0.5 break-all text-sm font-medium">
                                 {selectedComplaint.latitude.toFixed(
                                   6
                                 )}
@@ -1182,7 +1202,7 @@ export default function AuthorityDashboard() {
                                 Longitude
                               </p>
 
-                              <p className="text-sm font-medium">
+                              <p className="mt-0.5 break-all text-sm font-medium">
                                 {selectedComplaint.longitude.toFixed(
                                   6
                                 )}
@@ -1194,7 +1214,7 @@ export default function AuthorityDashboard() {
                                 Accuracy
                               </p>
 
-                              <p className="text-sm font-medium">
+                              <p className="mt-0.5 text-sm font-medium">
                                 {selectedComplaint.locationAccuracy
                                   ? `${Math.round(
                                       selectedComplaint.locationAccuracy
@@ -1208,7 +1228,7 @@ export default function AuthorityDashboard() {
                             href={`https://www.google.com/maps/search/?api=1&query=${selectedComplaint.latitude},${selectedComplaint.longitude}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#D97706] hover:underline"
+                            className="mt-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#D97706] hover:underline"
                           >
                             <MapPin size={15} />
                             Open in Maps
@@ -1227,9 +1247,8 @@ export default function AuthorityDashboard() {
                     {Array.isArray(
                       selectedComplaint.statusHistory
                     ) &&
-                    selectedComplaint
-                      .statusHistory.length >
-                      0 ? (
+                    selectedComplaint.statusHistory
+                      .length > 0 ? (
                       <div className="mt-4 space-y-4">
                         {[
                           ...selectedComplaint.statusHistory,
@@ -1254,7 +1273,7 @@ export default function AuthorityDashboard() {
                                   <div className="absolute left-[4px] top-4 h-full w-px bg-slate-200 dark:bg-[#262626]" />
                                 )}
 
-                                <div>
+                                <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <StatusBadge
                                       status={
@@ -1269,7 +1288,7 @@ export default function AuthorityDashboard() {
                                     </span>
                                   </div>
 
-                                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">
+                                  <p className="mt-2 break-words text-sm leading-6 text-slate-600 dark:text-neutral-300">
                                     {history.note ||
                                       "No additional note."}
                                   </p>
@@ -1287,20 +1306,21 @@ export default function AuthorityDashboard() {
                 </div>
 
                 {/* RIGHT */}
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
+
                   {/* AI ANALYSIS */}
                   <div className="rounded-2xl border border-[#F2C078] bg-orange-50/50 p-4 dark:border-[#5A3A16] dark:bg-[#17100A]">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D97706] text-white">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#D97706] text-white">
                         <Brain size={18} />
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <h3 className="font-semibold">
                           AI Analysis
                         </h3>
 
-                        <p className="text-xs text-slate-500 dark:text-neutral-500">
+                        <p className="truncate text-xs text-slate-500 dark:text-neutral-500">
                           Automated grievance intelligence
                         </p>
                       </div>
@@ -1312,7 +1332,7 @@ export default function AuthorityDashboard() {
                           Category
                         </p>
 
-                        <p className="mt-1 text-sm font-semibold">
+                        <p className="mt-1 break-words text-sm font-semibold">
                           {selectedComplaint.aiCategory ||
                             selectedComplaint.category ||
                             "Other"}
@@ -1324,7 +1344,7 @@ export default function AuthorityDashboard() {
                           Department
                         </p>
 
-                        <p className="mt-1 text-sm font-semibold">
+                        <p className="mt-1 break-words text-sm font-semibold">
                           {selectedComplaint.department ||
                             "General Administration"}
                         </p>
@@ -1389,7 +1409,7 @@ export default function AuthorityDashboard() {
                           AI Summary
                         </p>
 
-                        <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-neutral-300">
+                        <p className="mt-1 break-words text-sm leading-6 text-slate-700 dark:text-neutral-300">
                           {selectedComplaint.aiSummary ||
                             "No AI summary is available for this complaint."}
                         </p>
@@ -1400,8 +1420,7 @@ export default function AuthorityDashboard() {
                   {/* DUPLICATE WARNING */}
                   <div
                     className={`rounded-2xl border p-4 ${
-                      selectedDuplicates.length >
-                      0
+                      selectedDuplicates.length > 0
                         ? "border-orange-200 bg-orange-50 dark:border-[#5A3A16] dark:bg-[#17100A]"
                         : "border-green-200 bg-green-50 dark:border-[#164A2A] dark:bg-[#09150D]"
                     }`}
@@ -1409,21 +1428,16 @@ export default function AuthorityDashboard() {
                     <div className="flex items-start gap-3">
                       <div
                         className={`mt-0.5 ${
-                          selectedDuplicates.length >
-                          0
+                          selectedDuplicates.length > 0
                             ? "text-orange-600"
                             : "text-green-600"
                         }`}
                       >
                         {selectedDuplicates.length >
                         0 ? (
-                          <AlertTriangle
-                            size={19}
-                          />
+                          <AlertTriangle size={19} />
                         ) : (
-                          <CheckCircle2
-                            size={19}
-                          />
+                          <CheckCircle2 size={19} />
                         )}
                       </div>
 
@@ -1451,22 +1465,16 @@ export default function AuthorityDashboard() {
                           (duplicate) => (
                             <button
                               type="button"
-                              key={
-                                duplicate.id
-                              }
+                              key={duplicate.id}
                               onClick={() => {
                                 const target =
                                   complaints.find(
-                                    (
-                                      item
-                                    ) =>
+                                    (item) =>
                                       item.id ===
                                       duplicate.id
                                   );
 
-                                if (
-                                  target
-                                ) {
+                                if (target) {
                                   setSelectedComplaint(
                                     target
                                   );
@@ -1475,31 +1483,23 @@ export default function AuthorityDashboard() {
                               className="w-full rounded-xl border border-orange-200 bg-white p-3 text-left transition hover:border-orange-300 dark:border-[#5A3A16] dark:bg-[#0A0A0A]"
                             >
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs font-bold text-[#D97706]">
-                                  {
-                                    duplicate.referenceId
-                                  }
+                                <span className="truncate text-xs font-bold text-[#D97706]">
+                                  {duplicate.referenceId}
                                 </span>
 
-                                <span className="text-xs font-bold text-orange-600">
-                                  {
-                                    duplicate.similarity
-                                  }
-                                  % match
+                                <span className="shrink-0 text-xs font-bold text-orange-600">
+                                  {duplicate.similarity}%
+                                  {" "}match
                                 </span>
                               </div>
 
                               <p className="mt-1 truncate text-sm font-medium">
-                                {
-                                  duplicate.title
-                                }
+                                {duplicate.title}
                               </p>
 
                               <p className="mt-1 text-xs text-slate-500 dark:text-neutral-500">
                                 Status:{" "}
-                                {
-                                  duplicate.status
-                                }
+                                {duplicate.status}
                               </p>
                             </button>
                           )
@@ -1516,7 +1516,7 @@ export default function AuthorityDashboard() {
 
                     <div className="mt-4 space-y-3">
                       <div className="flex items-start justify-between gap-4">
-                        <span className="text-xs text-slate-500 dark:text-neutral-500">
+                        <span className="shrink-0 text-xs text-slate-500 dark:text-neutral-500">
                           Case ID
                         </span>
 
@@ -1526,7 +1526,7 @@ export default function AuthorityDashboard() {
                       </div>
 
                       <div className="flex items-start justify-between gap-4">
-                        <span className="text-xs text-slate-500 dark:text-neutral-500">
+                        <span className="shrink-0 text-xs text-slate-500 dark:text-neutral-500">
                           Created
                         </span>
 
@@ -1538,7 +1538,7 @@ export default function AuthorityDashboard() {
                       </div>
 
                       <div className="flex items-start justify-between gap-4">
-                        <span className="text-xs text-slate-500 dark:text-neutral-500">
+                        <span className="shrink-0 text-xs text-slate-500 dark:text-neutral-500">
                           Last Updated
                         </span>
 
@@ -1550,7 +1550,7 @@ export default function AuthorityDashboard() {
                       </div>
 
                       <div className="flex items-start justify-between gap-4">
-                        <span className="text-xs text-slate-500 dark:text-neutral-500">
+                        <span className="shrink-0 text-xs text-slate-500 dark:text-neutral-500">
                           Location Status
                         </span>
 
@@ -1577,7 +1577,7 @@ export default function AuthorityDashboard() {
             </div>
 
             {/* MODAL FOOTER */}
-            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 dark:border-[#262626] sm:px-6">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-[#262626] sm:px-6">
               <p className="hidden text-xs text-slate-400 dark:text-neutral-600 sm:block">
                 Last updated{" "}
                 {formatDate(
@@ -1589,7 +1589,7 @@ export default function AuthorityDashboard() {
                 type="button"
                 onClick={closeComplaint}
                 disabled={updatingStatus}
-                className="ml-auto rounded-xl bg-[#0B1F3A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#12355B] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+                className="ml-auto min-h-11 rounded-xl bg-[#0B1F3A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#12355B] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
               >
                 Close Case View
               </button>

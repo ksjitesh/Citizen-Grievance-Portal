@@ -251,6 +251,11 @@ const PRIORITY_RULES = {
   ],
 };
 
+
+// --------------------------------------------------
+// TEXT NORMALIZATION
+// --------------------------------------------------
+
 function normalizeText(value) {
   return String(value || "")
     .toLowerCase()
@@ -259,131 +264,194 @@ function normalizeText(value) {
     .trim();
 }
 
-function containsKeyword(
-  text,
-  keyword
-) {
-  return text.includes(
-    normalizeText(keyword)
-  );
+
+// --------------------------------------------------
+// WORD TOKENIZATION
+// --------------------------------------------------
+
+function tokenizeWords(text) {
+  return normalizeText(text)
+    .split(" ")
+    .filter(Boolean);
 }
 
-function calculateCategoryScores(
-  text
-) {
-  return CATEGORY_RULES.map(
-    (rule) => {
-      const matchedKeywords =
-        rule.keywords.filter(
-          (keyword) =>
-            containsKeyword(
-              text,
-              keyword
-            )
-        );
 
-      let score =
-        matchedKeywords.length;
+// --------------------------------------------------
+// STOP WORDS
+// Used mainly by duplicate detection.
+// These words usually do not describe the actual
+// civic issue.
+// --------------------------------------------------
 
-      /*
-       * Longer / more specific keywords
-       * receive slightly more weight.
-       */
-      matchedKeywords.forEach(
-        (keyword) => {
-          const normalized =
-            normalizeText(keyword);
+const STOP_WORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "is",
+  "are",
+  "was",
+  "were",
+  "has",
+  "have",
+  "had",
+  "to",
+  "of",
+  "in",
+  "on",
+  "at",
+  "for",
+  "with",
+  "from",
+  "near",
+  "there",
+  "this",
+  "that",
+  "very",
+  "my",
+  "our",
+  "me",
+  "we",
+  "it",
+  "not",
+  "been",
+  "being",
+  "due",
+  "because",
+  "please",
+  "kindly",
+  "need",
+  "needs",
+  "request",
+  "complaint",
+  "issue",
+  "problem",
+]);
 
-          if (
-            normalized.includes(" ") ||
-            normalized.length > 8
-          ) {
-            score += 0.5;
-          }
-        }
-      );
 
-      return {
-        ...rule,
-        score,
-        matchedKeywords,
-      };
-    }
-  ).sort(
-    (a, b) =>
-      b.score - a.score
+// --------------------------------------------------
+// KEYWORD MATCHING
+// --------------------------------------------------
+
+function containsKeyword(text, keyword) {
+  const normalizedText = normalizeText(text);
+  const normalizedKeyword = normalizeText(keyword);
+
+  if (!normalizedText || !normalizedKeyword) {
+    return false;
+  }
+
+  /*
+   * Multi-word keywords are matched as complete phrases.
+   *
+   * Example:
+   * "road damage" -> matches
+   * "road damages" -> does not accidentally match
+   * "railroad" -> does not match "road"
+   */
+  if (normalizedKeyword.includes(" ")) {
+    const escapedKeyword = normalizedKeyword.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
+    );
+
+    const phrasePattern = new RegExp(
+      `(^|\\s)${escapedKeyword}(?=\\s|$)`,
+      "i"
+    );
+
+    return phrasePattern.test(normalizedText);
+  }
+
+  /*
+   * Single-word keywords are matched as complete words.
+   *
+   * This prevents substring problems such as:
+   * "road" accidentally matching another word
+   * that merely contains "road".
+   */
+  const escapedKeyword = normalizedKeyword.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+
+  const wordPattern = new RegExp(
+    `(^|\\s)${escapedKeyword}(?=\\s|$)`,
+    "i"
+  );
+
+  return wordPattern.test(normalizedText);
+}
+
+
+// --------------------------------------------------
+// CATEGORY SCORING
+// --------------------------------------------------
+
+function calculateCategoryScores(text) {
+  return CATEGORY_RULES.map((rule) => {
+    const matchedKeywords = rule.keywords.filter(
+      (keyword) => containsKeyword(text, keyword)
+    );
+
+    let score = matchedKeywords.length;
+
+    /*
+     * More specific phrases receive additional weight.
+     *
+     * Example:
+     * "water"            -> normal weight
+     * "water leakage"    -> higher weight
+     * "garbage collection" -> higher weight
+     */
+    matchedKeywords.forEach((keyword) => {
+      const normalized = normalizeText(keyword);
+      const wordCount = normalized.split(" ").length;
+
+      if (wordCount >= 2) {
+        score += 0.75;
+      } else if (normalized.length >= 8) {
+        score += 0.25;
+      }
+    });
+
+    return {
+      ...rule,
+      score,
+      matchedKeywords,
+    };
+  }).sort((first, second) => {
+    return second.score - first.score;
+  });
+}
+
+
+// --------------------------------------------------
+// PRIORITY DETECTION
+// --------------------------------------------------
+
+function getPrioritySignals(text, priority) {
+  return PRIORITY_RULES[priority].filter((keyword) =>
+    containsKeyword(text, keyword)
   );
 }
 
 function detectPriority(text) {
-  for (
-    const keyword of PRIORITY_RULES
-      .Critical
-  ) {
-    if (
-      containsKeyword(
-        text,
-        keyword
-      )
-    ) {
-      return {
-        priority: "Critical",
-        signals:
-          PRIORITY_RULES.Critical.filter(
-            (item) =>
-              containsKeyword(
-                text,
-                item
-              )
-          ),
-      };
-    }
-  }
+  const priorityOrder = [
+    "Critical",
+    "High",
+    "Medium",
+    "Low",
+  ];
 
-  for (
-    const keyword of PRIORITY_RULES
-      .High
-  ) {
-    if (
-      containsKeyword(
-        text,
-        keyword
-      )
-    ) {
-      return {
-        priority: "High",
-        signals:
-          PRIORITY_RULES.High.filter(
-            (item) =>
-              containsKeyword(
-                text,
-                item
-              )
-          ),
-      };
-    }
-  }
+  for (const priority of priorityOrder) {
+    const signals = getPrioritySignals(text, priority);
 
-  for (
-    const keyword of PRIORITY_RULES
-      .Medium
-  ) {
-    if (
-      containsKeyword(
-        text,
-        keyword
-      )
-    ) {
+    if (signals.length > 0) {
       return {
-        priority: "Medium",
-        signals:
-          PRIORITY_RULES.Medium.filter(
-            (item) =>
-              containsKeyword(
-                text,
-                item
-              )
-          ),
+        priority,
+        signals,
       };
     }
   }
@@ -394,18 +462,24 @@ function detectPriority(text) {
   };
 }
 
+
+// --------------------------------------------------
+// SUMMARY GENERATION
+// --------------------------------------------------
+
 function buildSummary({
   category,
   department,
   priority,
   matchedKeywords,
 }) {
-  const issue =
-    category.toLowerCase();
+  const issue = category.toLowerCase();
 
-  let summary = `This grievance appears to concern ${issue}. `;
+  let summary =
+    `This grievance appears to concern ${issue}. `;
 
-  summary += `The suggested department is ${department}. `;
+  summary +=
+    `The suggested department is ${department}. `;
 
   if (priority === "Critical") {
     summary +=
@@ -421,16 +495,71 @@ function buildSummary({
       "The complaint appears suitable for normal service processing.";
   }
 
-  if (
-    matchedKeywords.length > 0
-  ) {
-    summary += ` Detected signals include ${matchedKeywords
-      .slice(0, 4)
-      .join(", ")}.`;
+  if (matchedKeywords.length > 0) {
+    summary +=
+      ` Detected signals include ${matchedKeywords
+        .slice(0, 4)
+        .join(", ")}.`;
   }
 
   return summary;
 }
+
+
+// --------------------------------------------------
+// CONFIDENCE CALCULATION
+// --------------------------------------------------
+
+function calculateConfidence(
+  topMatch,
+  secondMatch
+) {
+  if (!topMatch || topMatch.score <= 0) {
+    return 0.35;
+  }
+
+  /*
+   * Base confidence increases with the number and
+   * specificity of matched signals.
+   */
+  const baseConfidence =
+    0.68 +
+    Math.min(
+      topMatch.score * 0.06,
+      0.22
+    );
+
+  /*
+   * If two categories are very close, reduce confidence.
+   */
+  const scoreDifference =
+    topMatch.score -
+    (secondMatch?.score || 0);
+
+  const ambiguityPenalty =
+    secondMatch &&
+    secondMatch.score > 0 &&
+    scoreDifference < 1
+      ? 0.08
+      : 0;
+
+  const confidence = Math.max(
+    0.35,
+    Math.min(
+      0.95,
+      baseConfidence - ambiguityPenalty
+    )
+  );
+
+  return Number(
+    confidence.toFixed(2)
+  );
+}
+
+
+// --------------------------------------------------
+// MAIN AI ANALYSIS
+// --------------------------------------------------
 
 export function analyzeComplaint({
   title = "",
@@ -445,11 +574,13 @@ export function analyzeComplaint({
   const combinedText =
     `${normalizedTitle} ${normalizedDescription}`.trim();
 
+  /*
+   * No meaningful input.
+   */
   if (!combinedText) {
     return {
       category: "Other",
-      department:
-        "General Administration",
+      department: "General Administration",
       priority: "Low",
       confidence: 0.35,
       summary:
@@ -459,9 +590,7 @@ export function analyzeComplaint({
   }
 
   const categoryScores =
-    calculateCategoryScores(
-      combinedText
-    );
+    calculateCategoryScores(combinedText);
 
   const topMatch =
     categoryScores[0];
@@ -482,9 +611,8 @@ export function analyzeComplaint({
     [];
 
   /*
-   * If no meaningful keyword was found,
-   * classify as Other instead of pretending
-   * to have high confidence.
+   * If nothing meaningful was detected,
+   * do not pretend the classifier knows the category.
    */
   if (
     !topMatch ||
@@ -497,46 +625,37 @@ export function analyzeComplaint({
   }
 
   const priorityResult =
-    detectPriority(
-      combinedText
+    detectPriority(combinedText);
+
+  const confidence =
+    calculateConfidence(
+      topMatch,
+      secondMatch
     );
 
-  const baseConfidence =
-    topMatch?.score > 0
-      ? 0.68 +
-        Math.min(
-          topMatch.score * 0.06,
-          0.22
-        )
-      : 0.35;
+  /*
+   * If no category was found, keep confidence low.
+   */
+  const finalConfidence =
+    category === "Other"
+      ? 0.35
+      : confidence;
 
-  const ambiguityPenalty =
-    secondMatch &&
-    secondMatch.score > 0 &&
-    topMatch.score -
-      secondMatch.score <
-      1
-      ? 0.08
-      : 0;
-
-  const confidence = Math.max(
-    0.35,
-    Math.min(
-      0.95,
-      baseConfidence -
-        ambiguityPenalty
-    )
-  );
+  const allKeywords = [
+    ...matchedKeywords,
+    ...priorityResult.signals,
+  ];
 
   return {
     category,
     department,
+
     priority:
       priorityResult.priority,
+
     confidence:
-      Number(
-        confidence.toFixed(2)
-      ),
+      finalConfidence,
+
     summary: buildSummary({
       category,
       department,
@@ -544,41 +663,47 @@ export function analyzeComplaint({
         priorityResult.priority,
       matchedKeywords,
     }),
+
     keywords: [
-      ...new Set([
-        ...matchedKeywords,
-        ...priorityResult.signals,
-      ]),
+      ...new Set(allKeywords),
     ].slice(0, 8),
   };
 }
 
-/*
- * --------------------------------------------------
- * DUPLICATE DETECTION
- * --------------------------------------------------
- */
 
-function tokenize(text) {
+// --------------------------------------------------
+// DUPLICATE DETECTION
+// --------------------------------------------------
+
+function tokenizeForDuplicateDetection(text) {
   return new Set(
-    normalizeText(text)
-      .split(" ")
+    tokenizeWords(text)
       .filter(
         (word) =>
-          word.length >= 3
+          word.length >= 3 &&
+          !STOP_WORDS.has(word)
       )
   );
 }
+
+
+// --------------------------------------------------
+// JACCARD SIMILARITY
+// --------------------------------------------------
 
 function calculateSimilarity(
   firstText,
   secondText
 ) {
   const firstTokens =
-    tokenize(firstText);
+    tokenizeForDuplicateDetection(
+      firstText
+    );
 
   const secondTokens =
-    tokenize(secondText);
+    tokenizeForDuplicateDetection(
+      secondText
+    );
 
   if (
     firstTokens.size === 0 ||
@@ -589,15 +714,11 @@ function calculateSimilarity(
 
   let intersection = 0;
 
-  firstTokens.forEach(
-    (token) => {
-      if (
-        secondTokens.has(token)
-      ) {
-        intersection += 1;
-      }
+  firstTokens.forEach((token) => {
+    if (secondTokens.has(token)) {
+      intersection += 1;
     }
-  );
+  });
 
   const union =
     new Set([
@@ -610,10 +731,14 @@ function calculateSimilarity(
   }
 
   return Math.round(
-    (intersection / union) *
-      100
+    (intersection / union) * 100
   );
 }
+
+
+// --------------------------------------------------
+// DUPLICATE DETECTION
+// --------------------------------------------------
 
 export function findPossibleDuplicates(
   newComplaint,
@@ -651,16 +776,22 @@ export function findPossibleDuplicates(
 
       return {
         id: complaint.id,
+
         referenceId:
           complaint.referenceId,
+
         title:
           complaint.title,
+
         description:
           complaint.description,
+
         status:
           complaint.status,
+
         category:
           complaint.category,
+
         similarity,
       };
     })
@@ -669,28 +800,26 @@ export function findPossibleDuplicates(
         item.similarity >= 45
     )
     .sort(
-      (a, b) =>
-        b.similarity -
-        a.similarity
+      (first, second) =>
+        second.similarity -
+        first.similarity
     )
     .slice(0, 3);
 }
 
-/*
- * Useful helper for Authority Dashboard
- */
+
+// --------------------------------------------------
+// AI CONFIDENCE LABEL
+// --------------------------------------------------
+
 export function getAIStatusLabel(
   confidence
 ) {
-  if (
-    confidence >= 0.85
-  ) {
+  if (confidence >= 0.85) {
     return "High Confidence";
   }
 
-  if (
-    confidence >= 0.65
-  ) {
+  if (confidence >= 0.65) {
     return "Moderate Confidence";
   }
 

@@ -150,15 +150,29 @@ function MyGrievances() {
       loadComplaints();
     };
 
+    const handleComplaintUpdate = () => {
+      loadComplaints();
+    };
+
     window.addEventListener(
       "storage",
       handleStorageChange
+    );
+
+    window.addEventListener(
+      "civicai-complaints-updated",
+      handleComplaintUpdate
     );
 
     return () => {
       window.removeEventListener(
         "storage",
         handleStorageChange
+      );
+
+      window.removeEventListener(
+        "civicai-complaints-updated",
+        handleComplaintUpdate
       );
     };
   }, [user?.id]);
@@ -209,7 +223,6 @@ function MyGrievances() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-slate-900 transition-colors duration-300 dark:bg-black dark:text-white">
       <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
-        {/* Back */}
         <button
           type="button"
           onClick={handleBack}
@@ -219,7 +232,6 @@ function MyGrievances() {
           Back
         </button>
 
-        {/* Header */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D97706]/20 bg-[#D97706]/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#B45309] dark:border-[#F28C28]/20 dark:bg-[#F28C28]/10 dark:text-[#F28C28]">
@@ -249,7 +261,6 @@ function MyGrievances() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-[#262626] dark:bg-[#0A0A0A]">
             <div className="flex items-center justify-between">
@@ -257,7 +268,6 @@ function MyGrievances() {
                 size={21}
                 className="text-[#0B1F3A] dark:text-white"
               />
-
               <span className="text-xs font-semibold text-slate-400">
                 Total
               </span>
@@ -336,7 +346,6 @@ function MyGrievances() {
           </div>
         </div>
 
-        {/* Filters */}
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 dark:border-[#262626] dark:bg-[#0A0A0A] sm:p-5">
           <div className="flex flex-col gap-3 lg:flex-row">
             <div className="relative flex-1">
@@ -376,18 +385,23 @@ function MyGrievances() {
                 <option value="All">
                   All Status
                 </option>
+
                 <option value="Submitted">
                   Submitted
                 </option>
+
                 <option value="In Progress">
                   In Progress
                 </option>
+
                 <option value="Resolved">
                   Resolved
                 </option>
+
                 <option value="Rejected">
                   Rejected
                 </option>
+
                 <option value="Closed">
                   Closed
                 </option>
@@ -396,7 +410,6 @@ function MyGrievances() {
           </div>
         </section>
 
-        {/* Complaint List */}
         <section className="mt-6">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center dark:border-[#262626] dark:bg-[#0A0A0A]">
