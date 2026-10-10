@@ -55,7 +55,7 @@ function Login() {
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const email = formData.email.trim().toLowerCase();
@@ -73,14 +73,14 @@ function Login() {
       return;
     }
 
-    const result = login(email, password);
+    const result = await login(email, password);
 
     if (!result.success) {
       setError(result.message);
       return;
     }
 
-    navigate("/", {
+    navigate(result.user?.role === "authority" ? "/authority-dashboard" : "/", {
       replace: true,
     });
   };

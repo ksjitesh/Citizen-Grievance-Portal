@@ -46,7 +46,7 @@ function Register() {
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const fullName = formData.fullName.trim();
@@ -79,16 +79,13 @@ function Register() {
     }
 
     const userData = {
-      id: `USR-${Date.now()}`,
       fullName,
       email,
       phone,
       password: formData.password,
-      role: "citizen",
-      createdAt: new Date().toISOString(),
     };
 
-    const result = register(userData);
+    const result = await register(userData);
 
     if (!result.success) {
       setError(result.message);

@@ -48,22 +48,28 @@ function Settings() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    const result = await logout();
+
+    if (!result.success) {
+      window.alert(result.message || "Unable to sign out. Please try again.");
+      return;
+    }
 
     navigate("/login", {
       replace: true,
     });
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (deleteConfirm !== "DELETE") {
       return;
     }
 
-    const result = deleteAccount();
+    const result = await deleteAccount();
 
     if (!result.success) {
+      window.alert(result.message || "Unable to delete the account. Please try again.");
       return;
     }
 

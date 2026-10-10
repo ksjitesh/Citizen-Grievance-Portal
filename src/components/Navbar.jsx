@@ -124,8 +124,13 @@ function Navbar() {
    * --------------------------------------------------
    */
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    const result = await logout();
+
+    if (!result.success) {
+      window.alert(result.message || "Unable to sign out. Please try again.");
+      return;
+    }
 
     setAccountOpen(false);
 

@@ -4,505 +4,257 @@ import {
   useEffect,
   useState,
 } from "react";
+import {
+  createUserWithEmailAndPassword,
+  deleteUser,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+} from "firebase/auth";
 
-const AuthContext =
-  createContext(null);
+import { auth } from "../firebase";
 
-const USERS_STORAGE_KEY =
-  "civicai-users";
+const AuthContext = createContext(null);
+const AUTHORITY_EMAIL = "ksjitesh17@gmail.com";
+const PROFILE_STORAGE_PREFIX = "civicai-profile-";
 
-const CURRENT_USER_KEY =
-  "civicai-current-user";
+function normalizeEmail(email = "") {
+  return email.trim().toLowerCase();
+}
 
-const DEMO_AUTHORITY_EMAIL =
-  "authority@civicai.gov.in";
-
-const DEMO_AUTHORITY_PASSWORD =
-  "Authority@123";
-
-function getStoredUsers() {
+function getStoredProfile(uid) {
   try {
-    const storedUsers =
-      localStorage.getItem(
-        USERS_STORAGE_KEY
-      );
-
-    return storedUsers
-      ? JSON.parse(storedUsers)
-      : [];
+    const value = localStorage.getItem(`${PROFILE_STORAGE_PREFIX}${uid}`);
+    return value ? JSON.parse(value) : {};
   } catch {
-    return [];
+    return {};
   }
 }
 
-function saveUsers(users) {
-  localStorage.setItem(
-    USERS_STORAGE_KEY,
-    JSON.stringify(users)
-  );
-}
-
-function getStoredCurrentUser() {
+function saveProfile(uid, profile) {
   try {
-    const storedUser =
-      localStorage.getItem(
-        CURRENT_USER_KEY
-      );
-
-    return storedUser
-      ? JSON.parse(storedUser)
-      : null;
+    localStorage.setItem(`${PROFILE_STORAGE_PREFIX}${uid}`, JSON.stringify(profile));
   } catch {
-    return null;
+    // Firebase authentication must still work if browser storage is unavailable.
   }
 }
 
-function createSessionUser(user) {
+function createSessionUser(firebaseUser) {
+  const profile = getStoredProfile(firebaseUser.uid);
+  const email = normalizeEmail(firebaseUser.email || "");
+
   return {
-    id: user.id,
-    fullName: user.fullName,
-    email: user.email,
-    phone: user.phone || "",
-    role: user.role || "citizen",
-    createdAt: user.createdAt,
+    id: firebaseUser.uid,
+    fullName: firebaseUser.displayName || profile.fullName || "",
+    email,
+    phone: profile.phone || "",
+    // UI routing hint only. This is NOT secure server-side authorization.
+    role: email === AUTHORITY_EMAIL ? "authority" : "citizen",
+    createdAt: firebaseUser.metadata?.creationTime || "",
   };
 }
 
-/*
- * Create demo authority account
- * automatically if it does not exist.
- */
-function ensureDemoAuthority() {
-  const users = getStoredUsers();
-
-  const authorityExists =
-    users.some(
-      (user) =>
-        user.email ===
-        DEMO_AUTHORITY_EMAIL
-    );
-
-  if (authorityExists) {
-    return;
+function getErrorMessage(error) {
+  switch (error?.code) {
+    case "auth/email-already-in-use":
+      return "An account with this email already exists. Please sign in.";
+    case "auth/invalid-email":
+      return "Please enter a valid email address.";
+    case "auth/invalid-credential":
+    case "auth/invalid-login-credentials":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Invalid email or password.";
+    case "auth/weak-password":
+      return "Please choose a stronger password (at least 6 characters).";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please try again later.";
+    case "auth/network-request-failed":
+      return "Network error. Check your internet connection.";
+    case "auth/requires-recent-login":
+      return "For security, sign in again and then retry account deletion.";
+    case "auth/operation-not-allowed":
+      return "Email/password sign-in is not enabled in Firebase Authentication.";
+    case "auth/user-disabled":
+      return "This account has been disabled.";
+    case "auth/unauthorized-continue-uri":
+    case "auth/invalid-continue-uri":
+      return "Firebase password-reset settings need to be checked in the Firebase Console.";
+    default:
+      return "Something went wrong. Please try again.";
   }
-
-  const authorityUser = {
-    id: "AUTH-DEMO-001",
-
-    fullName:
-      "CivicAI Authority Officer",
-
-    email:
-      DEMO_AUTHORITY_EMAIL,
-
-    password:
-      DEMO_AUTHORITY_PASSWORD,
-
-    phone:
-      "+91 9000000000",
-
-    role: "authority",
-
-    createdAt:
-      new Date().toISOString(),
-  };
-
-  saveUsers([
-    ...users,
-    authorityUser,
-  ]);
 }
 
-export function AuthProvider({
-  children,
-}) {
-  const [user, setUser] =
-    useState(
-      getStoredCurrentUser
-    );
-
-  const [loading, setLoading] =
-    useState(true);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    /*
-     * Make sure the demo authority
-     * account exists before authentication
-     * is evaluated.
-     */
-    ensureDemoAuthority();
+    // Remove legacy prototype credentials (which stored passwords in localStorage).
+    // Do not clear grievance records or theme preferences.
+    try {
+      localStorage.removeItem("civicai-users");
+      localStorage.removeItem("civicai-current-user");
+    } catch {
+      // Ignore unavailable browser storage.
+    }
 
-    const storedUser =
-      getStoredCurrentUser();
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser) => {
+        setUser(firebaseUser ? createSessionUser(firebaseUser) : null);
+        setLoading(false);
+      },
+      () => {
+        setUser(null);
+        setLoading(false);
+      }
+    );
 
-    setUser(storedUser);
-    setLoading(false);
+    return unsubscribe;
   }, []);
 
-  /*
-   * ----------------------------------------
-   * REGISTER CITIZEN
-   * ----------------------------------------
-   */
+  const register = async (userData) => {
+    const email = normalizeEmail(userData?.email || "");
+    const password = userData?.password || "";
 
-  const register = (
-    userData
-  ) => {
-    const users =
-      getStoredUsers();
+    if (!email || !password) {
+      return { success: false, message: "Email and password are required." };
+    }
 
-    const normalizedEmail =
-      userData.email
-        .trim()
-        .toLowerCase();
-
-    const existingUser =
-      users.find(
-        (existingUser) =>
-          existingUser.email ===
-          normalizedEmail
-      );
-
-    if (existingUser) {
+    if (email === AUTHORITY_EMAIL) {
       return {
         success: false,
-        message:
-          "An account with this email already exists.",
+        message: "This email is reserved for the authority account. Please sign in instead.",
       };
     }
 
-    const newUser = {
-      ...userData,
+    if (password.length < 6) {
+      return { success: false, message: "Password must contain at least 6 characters." };
+    }
 
-      id:
-        userData.id ||
-        `USR-${Date.now()}`,
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const fullName = (userData.fullName || "").trim();
+      const phone = (userData.phone || "").trim();
 
-      email:
-        normalizedEmail,
+      if (fullName) {
+        await updateProfile(credential.user, { displayName: fullName });
+      }
 
-      /*
-       * Public registration can
-       * only create citizen accounts.
-       */
-      role: "citizen",
-
-      createdAt:
-        userData.createdAt ||
-        new Date().toISOString(),
-    };
-
-    const updatedUsers = [
-      ...users,
-      newUser,
-    ];
-
-    saveUsers(updatedUsers);
-
-    const sessionUser =
-      createSessionUser(
-        newUser
-      );
-
-    localStorage.setItem(
-      CURRENT_USER_KEY,
-      JSON.stringify(
-        sessionUser
-      )
-    );
-
-    setUser(sessionUser);
-
-    return {
-      success: true,
-      user: sessionUser,
-    };
+      saveProfile(credential.user.uid, { fullName, phone });
+      const sessionUser = createSessionUser(credential.user);
+      setUser(sessionUser);
+      return { success: true, user: sessionUser };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
+    }
   };
 
-  /*
-   * ----------------------------------------
-   * LOGIN
-   * ----------------------------------------
-   */
+  const login = async (emailInput, password) => {
+    const email = normalizeEmail(emailInput || "");
 
-  const login = (
-    email,
-    password
-  ) => {
-    /*
-     * Make sure demo authority
-     * exists even if login is called
-     * before the initial effect finishes.
-     */
-    ensureDemoAuthority();
-
-    const users =
-      getStoredUsers();
-
-    const normalizedEmail =
-      email
-        .trim()
-        .toLowerCase();
-
-    const existingUser =
-      users.find(
-        (storedUser) =>
-          storedUser.email ===
-          normalizedEmail
-      );
-
-    if (!existingUser) {
-      return {
-        success: false,
-        message:
-          "No account was found with this email address.",
-      };
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const sessionUser = createSessionUser(credential.user);
+      setUser(sessionUser);
+      return { success: true, user: sessionUser };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
     }
-
-    if (
-      existingUser.password !==
-      password
-    ) {
-      return {
-        success: false,
-        message:
-          "Incorrect password. Please try again.",
-      };
-    }
-
-    const sessionUser =
-      createSessionUser(
-        existingUser
-      );
-
-    localStorage.setItem(
-      CURRENT_USER_KEY,
-      JSON.stringify(
-        sessionUser
-      )
-    );
-
-    setUser(sessionUser);
-
-    return {
-      success: true,
-      user: sessionUser,
-    };
   };
 
-  /*
-   * ----------------------------------------
-   * LOGOUT
-   * ----------------------------------------
-   */
-
-  const logout = () => {
-    localStorage.removeItem(
-      CURRENT_USER_KEY
-    );
-
-    setUser(null);
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
+    }
   };
 
-  /*
-   * ----------------------------------------
-   * DELETE ACCOUNT
-   * ----------------------------------------
-   */
+  const deleteAccount = async () => {
+    const currentUser = auth.currentUser;
 
-  const deleteAccount = () => {
-    if (!user) {
+    if (!currentUser) {
+      return { success: false, message: "No active account found." };
+    }
+
+    if (normalizeEmail(currentUser.email || "") === AUTHORITY_EMAIL) {
       return {
         success: false,
-        message:
-          "No active account found.",
+        message: "The designated authority account cannot be deleted from this screen.",
       };
     }
 
-    /*
-     * Prevent deleting the demo
-     * authority account accidentally.
-     */
-    if (
-      user.role ===
-        "authority" &&
-      user.email ===
-        DEMO_AUTHORITY_EMAIL
-    ) {
-      return {
-        success: false,
-        message:
-          "The demo authority account cannot be deleted.",
-      };
+    try {
+      const uid = currentUser.uid;
+      await deleteUser(currentUser);
+      try {
+        localStorage.removeItem(`${PROFILE_STORAGE_PREFIX}${uid}`);
+      } catch {
+        // Account deletion has succeeded; local profile cleanup is best-effort.
+      }
+      setUser(null);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
     }
-
-    const users =
-      getStoredUsers();
-
-    const updatedUsers =
-      users.filter(
-        (storedUser) =>
-          storedUser.id !==
-          user.id
-      );
-
-    saveUsers(updatedUsers);
-
-    localStorage.removeItem(
-      CURRENT_USER_KEY
-    );
-
-    setUser(null);
-
-    return {
-      success: true,
-    };
   };
 
-  /*
-   * ----------------------------------------
-   * RESET PASSWORD
-   * ----------------------------------------
-   */
+  const resetPassword = async (emailInput) => {
+    const email = normalizeEmail(emailInput || "");
 
-  const resetPassword = (
-    email,
-    newPassword
-  ) => {
-    const users =
-      getStoredUsers();
-
-    const normalizedEmail =
-      email
-        .trim()
-        .toLowerCase();
-
-    const userIndex =
-      users.findIndex(
-        (storedUser) =>
-          storedUser.email ===
-          normalizedEmail
-      );
-
-    if (userIndex === -1) {
-      return {
-        success: false,
-        message:
-          "No account was found with this email address.",
-      };
+    if (!email) {
+      return { success: false, message: "Please enter your email address." };
     }
 
-    if (
-      newPassword.length < 6
-    ) {
+    try {
+      await sendPasswordResetEmail(auth, email);
       return {
-        success: false,
-        message:
-          "Password must contain at least 6 characters.",
+        success: true,
+        message: "If an account exists for this email, a password-reset email has been sent. Check your inbox and spam folder.",
       };
+    } catch (error) {
+      // Do not reveal whether an email address is registered.
+      if (error?.code === "auth/user-not-found") {
+        return {
+          success: true,
+          message: "If an account exists for this email, a password-reset email has been sent. Check your inbox and spam folder.",
+        };
+      }
+      return { success: false, message: getErrorMessage(error) };
     }
-
-    /*
-     * Protect demo authority
-     * credentials in this prototype.
-     */
-    if (
-      normalizedEmail ===
-      DEMO_AUTHORITY_EMAIL
-    ) {
-      return {
-        success: false,
-        message:
-          "The demo authority password is managed by the prototype.",
-      };
-    }
-
-    const updatedUsers = [
-      ...users,
-    ];
-
-    updatedUsers[userIndex] = {
-      ...updatedUsers[userIndex],
-      password: newPassword,
-    };
-
-    saveUsers(updatedUsers);
-
-    return {
-      success: true,
-      message:
-        "Password updated successfully.",
-    };
   };
 
-  /*
-   * ----------------------------------------
-   * ROLE HELPERS
-   * ----------------------------------------
-   */
-
-  const isAuthenticated =
-    Boolean(user);
-
-  const isAuthority =
-    Boolean(
-      user &&
-        user.role ===
-          "authority"
-    );
-
-  const isCitizen =
-    Boolean(
-      user &&
-        user.role ===
-          "citizen"
-    );
-
-  /*
-   * ----------------------------------------
-   * CONTEXT VALUE
-   * ----------------------------------------
-   */
+  const isAuthenticated = Boolean(user);
+  const isAuthority = Boolean(user && user.role === "authority");
+  const isCitizen = Boolean(user && user.role === "citizen");
 
   const value = {
     user,
-
     loading,
-
     isAuthenticated,
-
     isAuthority,
-
     isCitizen,
-
     register,
-
     login,
-
     logout,
-
     deleteAccount,
-
     resetPassword,
   };
 
-  return (
-    <AuthContext.Provider
-      value={value}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const context =
-    useContext(AuthContext);
+  const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider"
-    );
+    throw new Error("useAuth must be used inside AuthProvider");
   }
 
   return context;
