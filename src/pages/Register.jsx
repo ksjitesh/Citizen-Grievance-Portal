@@ -111,6 +111,10 @@ function Register() {
         return;
       }
 
+      if (result.message) {
+        window.alert(result.message);
+      }
+
       navigate("/", {
         replace: true,
       });

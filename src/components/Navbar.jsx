@@ -19,7 +19,6 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 
-const AUTHORITY_EMAIL = "ksjitesh17@gmail.com";
 
 function ThemeButton({ mobile = false }) {
   const { theme, toggleTheme } = useTheme();
@@ -51,10 +50,8 @@ function Navbar() {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Keep the account links aligned with the existing client-side role model.
-  const isAuthority =
-    user?.role === "authority" ||
-    user?.email?.trim().toLowerCase() === AUTHORITY_EMAIL;
+  // Role is loaded from the user's Firestore profile, never inferred from email.
+  const isAuthority = user?.role === "authority";
 
   useEffect(() => {
     setAccountOpen(false);

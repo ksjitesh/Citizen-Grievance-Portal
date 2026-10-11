@@ -8,16 +8,17 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
 } from "firebase/auth";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
-const AUTHORITY_EMAIL = "ksjitesh17@gmail.com";
 const PROFILE_STORAGE_PREFIX = "civicai-profile-";
 
 function normalizeEmail(email = "") {
@@ -41,17 +42,32 @@ function saveProfile(uid, profile) {
   }
 }
 
-function createSessionUser(firebaseUser) {
-  const profile = getStoredProfile(firebaseUser.uid);
+async function createSessionUser(firebaseUser) {
+  const localProfile = getStoredProfile(firebaseUser.uid);
   const email = normalizeEmail(firebaseUser.email || "");
+  let cloudProfile = {};
+
+  try {
+    const profileSnapshot = await getDoc(doc(db, "users", firebaseUser.uid));
+    if (profileSnapshot.exists()) {
+      cloudProfile = profileSnapshot.data();
+    }
+  } catch (error) {
+    // Authentication should remain usable if Firestore has not been configured.
+    // In that case, fail closed to the citizen role; never infer authority from email.
+    console.error("Unable to load CivicAI role profile from Firestore:", error?.code || error);
+  }
+
+  const storedRole = String(cloudProfile.role || "citizen").trim().toLowerCase();
+  const role = storedRole === "authority" || storedRole === "admin" ? "authority" : "citizen";
 
   return {
     id: firebaseUser.uid,
-    fullName: firebaseUser.displayName || profile.fullName || "",
+    fullName: firebaseUser.displayName || cloudProfile.fullName || localProfile.fullName || "",
     email,
-    phone: profile.phone || "",
-    // UI routing hint only. This is NOT secure server-side authorization.
-    role: email === AUTHORITY_EMAIL ? "authority" : "citizen",
+    phone: cloudProfile.phone || localProfile.phone || "",
+    // Role comes from Firestore. Client-side routes are UI guards, not server authorization.
+    role,
     createdAt: firebaseUser.metadata?.creationTime || "",
   };
 }
@@ -103,9 +119,15 @@ export function AuthProvider({ children }) {
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
-        setUser(firebaseUser ? createSessionUser(firebaseUser) : null);
-        setLoading(false);
+      async (firebaseUser) => {
+        try {
+          setUser(firebaseUser ? await createSessionUser(firebaseUser) : null);
+        } catch (error) {
+          console.error("Unable to restore CivicAI session:", error);
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
       },
       () => {
         setUser(null);
@@ -124,13 +146,6 @@ export function AuthProvider({ children }) {
       return { success: false, message: "Email and password are required." };
     }
 
-    if (email === AUTHORITY_EMAIL) {
-      return {
-        success: false,
-        message: "This email is reserved for the authority account. Please sign in instead.",
-      };
-    }
-
     if (password.length < 6) {
       return { success: false, message: "Password must contain at least 6 characters." };
     }
@@ -145,9 +160,47 @@ export function AuthProvider({ children }) {
       }
 
       saveProfile(credential.user.uid, { fullName, phone });
-      const sessionUser = createSessionUser(credential.user);
+
+      let verificationEmailSent = false;
+      try {
+        await sendEmailVerification(credential.user);
+        verificationEmailSent = true;
+      } catch (verificationError) {
+        // The Firebase Auth account already exists; do not misreport account creation as failed.
+        console.error("Account created, but verification email could not be sent:", verificationError?.code || verificationError);
+      }
+
+      let firestoreProfileSaved = true;
+      try {
+        await setDoc(doc(db, "users", credential.user.uid), {
+          uid: credential.user.uid,
+          fullName,
+          email,
+          phone,
+          role: "citizen",
+          createdAt: serverTimestamp(),
+        });
+      } catch (profileError) {
+        // Auth account creation has already succeeded. Do not falsely report that
+        // account creation failed; show a setup warning and keep the user a citizen.
+        firestoreProfileSaved = false;
+        console.error("Firebase Auth account created, but Firestore profile write failed:", profileError?.code || profileError);
+      }
+
+      const sessionUser = await createSessionUser(credential.user);
       setUser(sessionUser);
-      return { success: true, user: sessionUser };
+      return {
+        success: true,
+        user: sessionUser,
+        message: [
+          verificationEmailSent
+            ? "Account created. A verification email has been sent."
+            : "Account created, but Firebase could not send the verification email. Check Authentication email templates and authorized domains.",
+          !firestoreProfileSaved
+            ? "The Firestore profile could not be saved. Enable Cloud Firestore and publish the supplied security rules."
+            : "",
+        ].filter(Boolean).join(" "),
+      };
     } catch (error) {
       return { success: false, message: getErrorMessage(error) };
     }
@@ -158,7 +211,7 @@ export function AuthProvider({ children }) {
 
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
-      const sessionUser = createSessionUser(credential.user);
+      const sessionUser = await createSessionUser(credential.user);
       setUser(sessionUser);
       return { success: true, user: sessionUser };
     } catch (error) {
@@ -183,10 +236,11 @@ export function AuthProvider({ children }) {
       return { success: false, message: "No active account found." };
     }
 
-    if (normalizeEmail(currentUser.email || "") === AUTHORITY_EMAIL) {
+    const currentSession = await createSessionUser(currentUser);
+    if (currentSession.role === "authority") {
       return {
         success: false,
-        message: "The designated authority account cannot be deleted from this screen.",
+        message: "Authority accounts cannot be deleted from this screen.",
       };
     }
 
