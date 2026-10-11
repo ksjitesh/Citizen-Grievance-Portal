@@ -63,9 +63,12 @@ function Footer() {
             </li>
 
             <li>
-              <span className="cursor-pointer transition hover:text-[#F28C28]">
+              <Link
+                to="/track-complaint"
+                className="transition hover:text-[#F28C28] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F28C28]"
+              >
                 Track Complaint
-              </span>
+              </Link>
             </li>
 
             <li>
@@ -98,7 +101,11 @@ function Footer() {
 
           <ul className="mt-5 space-y-3 text-sm text-slate-400">
 
-            <li>Authority Dashboard</li>
+            <li>
+              <Link to="/authority-dashboard" className="transition hover:text-[#F28C28] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F28C28]">
+                Authority Dashboard
+              </Link>
+            </li>
             <li>Grievance Management</li>
             <li>Analytics & Reports</li>
             <li>Department Routing</li>

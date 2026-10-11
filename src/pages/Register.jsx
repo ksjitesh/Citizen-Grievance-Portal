@@ -22,6 +22,7 @@ function Register() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -32,6 +33,20 @@ function Register() {
   });
 
   const [error, setError] = useState("");
+
+  const passwordStrength = (() => {
+    const password = formData.password;
+    if (!password) return { score: 0, label: "Enter a password" };
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    if (score <= 1) return { score, label: "Weak" };
+    if (score <= 2) return { score, label: "Fair" };
+    if (score === 3) return { score, label: "Good" };
+    return { score, label: "Strong" };
+  })();
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -48,6 +63,8 @@ function Register() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
+    setError("");
 
     const fullName = formData.fullName.trim();
     const email = formData.email.trim().toLowerCase();
@@ -85,16 +102,23 @@ function Register() {
       password: formData.password,
     };
 
-    const result = await register(userData);
+    setIsSubmitting(true);
+    try {
+      const result = await register(userData);
 
-    if (!result.success) {
-      setError(result.message);
-      return;
+      if (!result.success) {
+        setError(result.message || "Unable to create your account. Please try again.");
+        return;
+      }
+
+      navigate("/", {
+        replace: true,
+      });
+    } catch {
+      setError("Unable to create your account right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    navigate("/", {
-      replace: true,
-    });
   };
 
   return (
@@ -198,7 +222,7 @@ function Register() {
               </div>
 
               {error && (
-                <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
+                <div role="alert" aria-live="polite" className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
                   <AlertCircle
                     size={18}
                     className="mt-0.5 shrink-0"
@@ -326,7 +350,7 @@ function Register() {
                       onChange={handleChange}
                       placeholder="Minimum 6 characters"
                       autoComplete="new-password"
-                      className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-11 pr-12 text-sm text-[#0B1F3A] outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-orange-100 dark:border-[#333333] dark:bg-[#111111] dark:text-white dark:focus:ring-orange-950/30"
+                      className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-11 pr-20 text-sm text-[#0B1F3A] outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-orange-100 dark:border-[#333333] dark:bg-[#111111] dark:text-white dark:focus:ring-orange-950/30"
                     />
 
                     <button
@@ -334,20 +358,39 @@ function Register() {
                       onClick={() =>
                         setShowPassword((current) => !current)
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:text-[#0B1F3A] dark:hover:text-white"
+                      className="absolute right-2 top-1/2 z-10 inline-flex -translate-y-1/2 items-center gap-1 rounded-lg px-2 py-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#0B1F3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706] dark:text-slate-400 dark:hover:bg-[#1A1A1A] dark:hover:text-white"
                       aria-label={
                         showPassword
                           ? "Hide password"
                           : "Show password"
                       }
+                      aria-pressed={showPassword}
+                      title={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
-                        <EyeOff size={18} />
+                        <EyeOff size={17} />
                       ) : (
-                        <Eye size={18} />
+                        <Eye size={17} />
                       )}
+                      <span className="text-xs font-semibold">{showPassword ? "Hide" : "Show"}</span>
                     </button>
                   </div>
+                  {formData.password && (
+                    <div className="mt-3" aria-live="polite">
+                      <div className="mb-1.5 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400">Password strength</span>
+                        <span className={`font-semibold ${passwordStrength.score >= 3 ? "text-green-600 dark:text-green-400" : passwordStrength.score >= 2 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                          {passwordStrength.label}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5" role="meter" aria-label={`Password strength: ${passwordStrength.label}`} aria-valuemin={0} aria-valuemax={4} aria-valuenow={passwordStrength.score}>
+                        {[1, 2, 3, 4].map((step) => (
+                          <span key={step} className={`h-1.5 rounded-full ${passwordStrength.score >= step ? (passwordStrength.score >= 3 ? "bg-green-500" : passwordStrength.score === 2 ? "bg-amber-500" : "bg-red-500") : "bg-slate-200 dark:bg-[#262626]"}`} />
+                        ))}
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">Use 8+ characters with uppercase, lowercase, numbers and symbols for a stronger password.</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* CONFIRM PASSWORD */}
@@ -378,7 +421,7 @@ function Register() {
                       onChange={handleChange}
                       placeholder="Re-enter your password"
                       autoComplete="new-password"
-                      className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-11 pr-12 text-sm text-[#0B1F3A] outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-orange-100 dark:border-[#333333] dark:bg-[#111111] dark:text-white dark:focus:ring-orange-950/30"
+                      className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-11 pr-20 text-sm text-[#0B1F3A] outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-orange-100 dark:border-[#333333] dark:bg-[#111111] dark:text-white dark:focus:ring-orange-950/30"
                     />
 
                     <button
@@ -388,18 +431,21 @@ function Register() {
                           (current) => !current
                         )
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:text-[#0B1F3A] dark:hover:text-white"
+                      className="absolute right-2 top-1/2 z-10 inline-flex -translate-y-1/2 items-center gap-1 rounded-lg px-2 py-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#0B1F3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706] dark:text-slate-400 dark:hover:bg-[#1A1A1A] dark:hover:text-white"
                       aria-label={
                         showConfirmPassword
-                          ? "Hide password"
-                          : "Show password"
+                          ? "Hide confirm password"
+                          : "Show confirm password"
                       }
+                      aria-pressed={showConfirmPassword}
+                      title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                     >
                       {showConfirmPassword ? (
-                        <EyeOff size={18} />
+                        <EyeOff size={17} />
                       ) : (
-                        <Eye size={18} />
+                        <Eye size={17} />
                       )}
+                      <span className="text-xs font-semibold">{showConfirmPassword ? "Hide" : "Show"}</span>
                     </button>
                   </div>
                 </div>
@@ -408,14 +454,15 @@ function Register() {
 
                 <button
                   type="submit"
-                  className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0B1F3A] px-5 py-3.5 font-semibold text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#12355B] hover:shadow-lg dark:bg-white dark:text-black dark:hover:bg-slate-200"
+                  disabled={isSubmitting}
+                  className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0B1F3A] px-5 py-3.5 font-semibold text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#12355B] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-white dark:text-black dark:hover:bg-slate-200"
                 >
-                  Create Citizen Account
+                  {isSubmitting ? "Creating account..." : "Create Citizen Account"}
 
-                  <ArrowRight
+                  {!isSubmitting && <ArrowRight
                     size={18}
                     className="transition-transform duration-300 group-hover:translate-x-1"
-                  />
+                  />}
                 </button>
 
               </form>

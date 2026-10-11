@@ -8,6 +8,8 @@ import {
   Copy,
   MapPin,
   Sparkles,
+  Pause,
+  Play,
 } from "lucide-react";
 
 const slides = [
@@ -65,16 +67,19 @@ const slides = [
 
 function HeroShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const slide = slides[activeIndex];
   const Icon = slide.icon;
 
   useEffect(() => {
+    if (isPaused) return undefined;
+
     const interval = setInterval(() => {
       setActiveIndex((current) => (current + 1) % slides.length);
     }, 4200);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused]);
 
   return (
     <div className="relative mx-auto w-full max-w-[650px]">
@@ -98,9 +103,20 @@ function HeroShowcase() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-[10px] font-bold text-[#15803D] dark:border-green-900/50 dark:bg-green-950/20 dark:text-green-500">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-            ACTIVE
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-[10px] font-bold text-[#15803D] dark:border-green-900/50 dark:bg-green-950/20 dark:text-green-500">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+              {isPaused ? "PAUSED" : "AUTO PLAY"}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPaused((paused) => !paused)}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-[#D97706] hover:text-[#D97706] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706] dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:text-[#F28C28]"
+              aria-label={isPaused ? "Resume showcase slides" : "Pause showcase slides"}
+              title={isPaused ? "Resume slides" : "Pause slides"}
+            >
+              {isPaused ? <Play size={15} /> : <Pause size={15} />}
+            </button>
           </div>
         </div>
 

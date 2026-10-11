@@ -19,6 +19,7 @@ function Login() {
   const {
     login,
     isAuthenticated,
+    isAuthority,
     loading,
   } = useAuth();
 
@@ -29,6 +30,7 @@ function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   /*
    * If the user is already authenticated,
@@ -36,11 +38,14 @@ function Login() {
    */
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate("/", {
+      // Keep the redirect consistent with PublicOnlyRoute and the role
+      // returned by AuthContext. Redirecting everyone to "/" here can
+      // race with handleSubmit and send an authority user to the citizen home.
+      navigate(isAuthority ? "/authority-dashboard" : "/", {
         replace: true,
       });
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, isAuthority, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -57,6 +62,8 @@ function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
+    setError("");
 
     const email = formData.email.trim().toLowerCase();
     const password = formData.password;
@@ -73,16 +80,23 @@ function Login() {
       return;
     }
 
-    const result = await login(email, password);
+    setIsSubmitting(true);
+    try {
+      const result = await login(email, password);
 
-    if (!result.success) {
-      setError(result.message);
-      return;
+      if (!result.success) {
+        setError(result.message || "Unable to sign in. Please try again.");
+        return;
+      }
+
+      navigate(result.user?.role === "authority" ? "/authority-dashboard" : "/", {
+        replace: true,
+      });
+    } catch {
+      setError("Unable to sign in right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    navigate(result.user?.role === "authority" ? "/authority-dashboard" : "/", {
-      replace: true,
-    });
   };
 
   if (loading) {
@@ -204,7 +218,7 @@ function Login() {
 
               {/* Error */}
               {error && (
-                <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
+                <div role="alert" aria-live="polite" className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
                   <AlertCircle
                     size={18}
                     className="mt-0.5 shrink-0"
@@ -284,7 +298,7 @@ function Login() {
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="Enter your password"
-                      className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-12 text-sm text-[#0B1F3A] outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-orange-100 dark:border-[#262626] dark:bg-[#111111] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-[#F28C28] dark:focus:ring-orange-950/30"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-20 text-sm text-[#0B1F3A] outline-none transition placeholder:text-slate-400 focus:border-[#D97706] focus:ring-2 focus:ring-orange-100 dark:border-[#262626] dark:bg-[#111111] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-[#F28C28] dark:focus:ring-orange-950/30"
                     />
 
                     <button
@@ -294,18 +308,21 @@ function Login() {
                           (current) => !current
                         )
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#1A1A1A] dark:hover:text-white"
+                      className="absolute right-2 top-1/2 z-10 inline-flex -translate-y-1/2 items-center gap-1 rounded-lg px-2 py-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706] dark:text-slate-400 dark:hover:bg-[#1A1A1A] dark:hover:text-white"
                       aria-label={
                         showPassword
                           ? "Hide password"
                           : "Show password"
                       }
+                      aria-pressed={showPassword}
+                      title={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
-                        <EyeOff size={18} />
+                        <EyeOff size={17} />
                       ) : (
-                        <Eye size={18} />
+                        <Eye size={17} />
                       )}
+                      <span className="text-xs font-semibold">{showPassword ? "Hide" : "Show"}</span>
                     </button>
                   </div>
                 </div>
@@ -313,14 +330,15 @@ function Login() {
                 {/* Submit */}
                 <button
                   type="submit"
-                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#D97706] px-5 py-3.5 text-sm font-bold text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#B45309] hover:shadow-lg"
+                  disabled={isSubmitting}
+                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#D97706] px-5 py-3.5 text-sm font-bold text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#B45309] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  Sign In
+                  {isSubmitting ? "Signing in..." : "Sign In"}
 
-                  <ArrowRight
+                  {!isSubmitting && <ArrowRight
                     size={18}
                     className="transition-transform duration-300 group-hover:translate-x-1"
-                  />
+                  />}
                 </button>
 
               </form>

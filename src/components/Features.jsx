@@ -34,7 +34,7 @@ const features = [
 
 function Features() {
   return (
-    <section className="relative overflow-hidden border-t border-slate-200 bg-white py-24">
+    <section className="relative overflow-hidden border-t border-slate-200 bg-white py-24 dark:border-neutral-800 dark:bg-black">
 
       <div className="mx-auto max-w-7xl px-6">
 
@@ -45,14 +45,14 @@ function Features() {
             Platform Capabilities
           </p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#0B1F3A] md:text-5xl">
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#0B1F3A] dark:text-white md:text-5xl">
             Smarter grievance management,
-            <span className="block text-slate-500">
+            <span className="block text-slate-500 dark:text-neutral-400">
               from submission to resolution.
             </span>
           </h2>
 
-          <p className="mt-5 leading-7 text-slate-600">
+          <p className="mt-5 leading-7 text-slate-600 dark:text-neutral-400">
             Intelligent tools help citizens communicate problems clearly while
             giving authorities better information to process and resolve them.
           </p>
@@ -68,29 +68,26 @@ function Features() {
             return (
               <div
                 key={feature.title}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-6 transition-all duration-300 hover:-translate-y-2 hover:border-orange-200 hover:bg-white hover:shadow-xl"
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-6 transition-all dark:border-neutral-800 dark:bg-neutral-950 duration-300 hover:-translate-y-2 hover:border-orange-200 hover:bg-white hover:shadow-xl dark:hover:border-orange-900/60 dark:hover:bg-neutral-900"
               >
 
                 {/* Top accent */}
                 <div className="absolute left-0 right-0 top-0 h-0.5 w-0 bg-[#F28C28] transition-all duration-500 group-hover:w-full" />
 
                 {/* Icon */}
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0B1F3A] shadow-sm transition-all duration-300 group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-[#D97706]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0B1F3A] shadow-sm transition-all dark:border-neutral-800 dark:bg-neutral-900 dark:text-white duration-300 group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-[#D97706]">
                   <Icon size={23} />
                 </div>
 
-                <h3 className="mt-6 text-lg font-bold text-[#0B1F3A]">
+                <h3 className="mt-6 text-lg font-bold text-[#0B1F3A] dark:text-white">
                   {feature.title}
                 </h3>
 
-                <p className="mt-3 text-sm leading-6 text-slate-600">
+                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-neutral-400">
                   {feature.description}
                 </p>
 
-                <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-[#D97706] opacity-0 transition duration-300 group-hover:opacity-100">
-                  Learn more
-                  <span>→</span>
-                </div>
+                <div className="mt-6 h-0.5 w-8 rounded-full bg-[#F28C28] transition-all duration-300 group-hover:w-14" aria-hidden="true" />
 
               </div>
             );

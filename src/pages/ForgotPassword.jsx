@@ -36,15 +36,20 @@ function ForgotPassword() {
     }
 
     setIsSubmitting(true);
-    const result = await resetPassword(normalizedEmail);
-    setIsSubmitting(false);
+    try {
+      const result = await resetPassword(normalizedEmail);
 
-    if (!result.success) {
-      setError(result.message || "Unable to send the reset email. Please try again.");
-      return;
+      if (!result.success) {
+        setError(result.message || "Unable to send the reset email. Please try again.");
+        return;
+      }
+
+      setSuccess(result.message);
+    } catch {
+      setError("Unable to send the reset email right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setSuccess(result.message);
   };
 
   return (

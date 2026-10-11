@@ -23,22 +23,22 @@ function Stats() {
   ];
 
   return (
-    <section className="border-y border-slate-200 bg-[#F8FAFC] py-20">
+    <section className="border-y border-slate-200 bg-[#F8FAFC] py-20 dark:border-neutral-800 dark:bg-black">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-6 lg:grid-cols-4">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="group rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg"
+            className="group rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950 transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg dark:hover:border-orange-900/60 dark:hover:bg-neutral-900"
           >
             <p className="text-3xl font-bold tracking-tight text-[#D97706] transition-transform duration-300 group-hover:scale-110 md:text-4xl">
               {stat.value}
             </p>
 
-            <p className="mt-3 font-semibold text-[#0B1F3A]">
+            <p className="mt-3 font-semibold text-[#0B1F3A] dark:text-white">
               {stat.label}
             </p>
 
-            <p className="mt-2 text-xs leading-5 text-slate-500">
+            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-neutral-400">
               {stat.description}
             </p>
 
