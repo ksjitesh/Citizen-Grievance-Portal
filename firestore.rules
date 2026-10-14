@@ -1,10 +1,11 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Profile roles are assigned by the project owner in the Firebase Console.
-    // Signed-in users can read their own profile, but cannot promote themselves.
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null
+                  && request.auth.uid == userId;
 
       allow create: if request.auth != null
                     && request.auth.uid == userId
